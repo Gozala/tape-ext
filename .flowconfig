@@ -1,0 +1,10 @@
+[ignore]
+
+[libs]
+
+[include]
+
+[options]
+module.name_mapper='tape-ext' -> '<PROJECT_ROOT>/src/tape-ext'
+suppress_comment= \\(.\\|\n\\)*\\@FlowIssue
+suppress_comment= \\(.\\|\n\\)*\\@FlowIgnore
