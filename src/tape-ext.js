@@ -116,7 +116,7 @@ const work = async () => {
     .setBinary(binary)
     .setLoggingPrefs(log)
 
-  if (process.env.HEADLESS === "1") {
+  if (process.env.HEADLESS !== "0") {
     options.headless()
   }
 
