@@ -133,7 +133,7 @@ const work = async () => {
     // .withCapabilities(capabilities)
     .build()
 
-  let id = ''
+  let id = ""
 
   while (true) {
     const next = await inbox.next()
@@ -143,14 +143,15 @@ const work = async () => {
       const { value: message } = next
       switch (message.type) {
         case "test": {
-          if (id !== '') {
+          if (id !== "") {
             console.log(`#### Uninstall WebExtension ${id}`)
-            const command = new Command("uninstall addon")
-              .setParameter("id", id)
+            const command = new Command("uninstall addon").setParameter(
+              "id",
+              id
+            )
 
             await driver.execute(command)
           }
-
 
           console.log(`#### Install WebExtension ${message.path}`)
           const command = new Command("install addon")
@@ -168,24 +169,6 @@ const work = async () => {
       }
     }
   }
-  // process.on("message", (message /*:Message*/) => {
-  //   console.log("Receive", message)
-  //   switch (message.type) {
-  //     case "test": {
-  //       const command = new Command("install addon")
-  //         .setParameter("path", message.path)
-  //         .setParameter("temporary", true)
-
-  //       driver.execute(command)
-  //       return
-  //     }
-  //     case "exit": {
-  //       driver.quit()
-  //       process.exit(0)
-  //       return
-  //     }
-  //   }
-  // })
 }
 
 const MANIFEST = "manifest.json"
@@ -215,7 +198,7 @@ const supervise = async (program, script, pattern = ".") => {
     worker.send({ type: "exit" })
     worker.kill()
 
-    if (result.ok) {
+    if (result.fail.length === 0) {
       process.exit(0)
     } else {
       process.exit(1)
@@ -228,7 +211,9 @@ const supervise = async (program, script, pattern = ".") => {
     glob(globPattern, (error, matches) => resolve(matches || []))
   )
 
-  const tests = matches.map(match => path.join(process.cwd(), path.dirname(match)))
+  const tests = matches.map(match =>
+    path.join(process.cwd(), path.dirname(match))
+  )
 
   if (tests.length === 0) {
     worker.send({ type: "exit" })
