@@ -1,5 +1,5 @@
 {
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": "tape-ext",
   "description": "A command line tool (inspired by tape) to test web extensions",
   "keywords": [
@@ -23,7 +23,8 @@
     "glob": "7.1.2",
     "mz": "2.7.0",
     "selenium-webdriver": "4.0.0-alpha.1",
-    "tap-finished": "0.0.1"
+    "tap-merge": "0.3.1",
+    "tap-parser": "7.0.0"
   },
   "devDependencies": {
     "alias-quokka-plugin": "^0.1.0",

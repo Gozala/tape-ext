@@ -8,8 +8,9 @@ import * as geckodriver from "geckodriver"
 import { Command } from "selenium-webdriver/lib/command"
 import * as fs from "mz/fs"
 import * as fxUtil from "fx-runner/lib/utils"
-import finished from "tap-finished"
 import glob from "glob"
+import TapParser from "tap-parser"
+import TapMerge from "tap-merge"
 /*::
 import EventEmitter from "events"
 */
@@ -71,6 +72,8 @@ class Mailbox /*::<x, a>*/ {
   next() /*:Promise<{done:true}|{done:false, value:a}>*/ {
     if (this.inbox.length > 0) {
       return Promise.resolve({ done: false, value: this.inbox.shift() })
+    } else if (this.returned) {
+      return Promise.resolve({ done: true })
     } else {
       return new Promise((resolve, reject) => {
         this.waiting.push({ resolve, reject })
@@ -79,29 +82,14 @@ class Mailbox /*::<x, a>*/ {
   }
 }
 
-// const on = async function*(target, type) {
-//   const listener = event => emit(event)
-//   let emit = event => console.warn(`Missed event ${type}`, event)
-//   try {
-//     target.on(type, listener)
-//     while (true) {
-//       yield await new Promise(resolve => {
-//         emit = resolve
-//       })
-//     }
-//   } finally {
-//     target.removeListener(type, listener)
-//   }
-// }
-
 /*::
 type Message =
   | { type:"test", path:string}
-  | { type:"exit" }
 */
 
 const work = async () => {
   const inbox /*:Mailbox<empty, Message>*/ = Mailbox.on(process, "message", 1)
+  process.on("disconnect", () => inbox.return())
 
   process.env.MOZ_DISABLE_CONTENT_SANDBOX = "1"
   const binary = await findFirefox(process.env.MOZ_BINARY || "nightly")
@@ -138,7 +126,9 @@ const work = async () => {
   while (true) {
     const next = await inbox.next()
     if (next.done) {
-      break
+      await driver.quit()
+      process.exit(0)
+      return
     } else {
       const { value: message } = next
       switch (message.type) {
@@ -161,11 +151,6 @@ const work = async () => {
           id = await driver.execute(command)
           break
         }
-        case "exit": {
-          await driver.quit()
-          process.exit(0)
-          return
-        }
       }
     }
   }
@@ -187,22 +172,19 @@ const supervise = async (program, script, pattern = ".") => {
   })
 
   const worker = cluster.fork()
-  const tap = finished(result => {
-    console.log(`# tests ${result.asserts.length}`)
-    console.log(`# pass  ${result.pass.length}`)
-    if (result.fail.length > 0) {
-      console.log(`# fail  ${result.fail.length}`)
+  const tap = TapMerge()
+  const parser = new TapParser()
+  tap.pipe(parser)
+  parser.on("complete", result => {
+    console.log(`# tests ${result.count}`)
+    console.log(`# pass  ${result.pass}`)
+    if (result.fail > 0) {
+      console.log(`# fail  ${result.fail}`)
     } else {
       console.log(`# ok`)
     }
-    worker.send({ type: "exit" })
-    worker.kill()
 
-    if (result.fail.length === 0) {
-      process.exit(0)
-    } else {
-      process.exit(1)
-    }
+    process.exitCode = result.ok ? 0 : 1
   })
 
   const globPattern = normalizeGlob(pattern)
@@ -216,8 +198,8 @@ const supervise = async (program, script, pattern = ".") => {
   )
 
   if (tests.length === 0) {
-    worker.send({ type: "exit" })
     console.error(`glob ${globPattern} did not found an matches.`)
+    worker.disconnect()
     process.exit(1)
   } else {
     worker.send({ type: "test", path: tests.shift() })
@@ -230,6 +212,7 @@ const supervise = async (program, script, pattern = ".") => {
             worker.send({ type: "test", path: test })
           } else {
             tap.end()
+            worker.disconnect()
           }
         } else if (line.startsWith(OUTPUT_PREFIX)) {
           const message = line.substr(OUTPUT_PREFIX.length + 1)
