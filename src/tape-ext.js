@@ -18,6 +18,8 @@ import EventEmitter from "events"
 const TEST_TIMEOUT = 5000
 const OUTPUT_PREFIX = "console.log: WebExtensions:"
 const FIN = `---------- FIN ----------`
+// \r\n, \n, or \r followed by something other than \n
+const NEW_LINE = /\r?\n|\r(?!\n)/
 
 const findFirefox = async binaryPath => {
   const binary = await fxUtil.normalizeBinary(binaryPath)
@@ -205,7 +207,7 @@ const supervise = async (program, script, pattern = ".") => {
     worker.send({ type: "test", path: tests.shift() })
 
     worker.process.stdout.on("data", buffer => {
-      for (const line of buffer.toString().split("\n")) {
+      for (const line of buffer.toString().split(NEW_LINE)) {
         if (line === `${OUTPUT_PREFIX} ${FIN}`) {
           const test = tests.shift()
           if (test != null) {
