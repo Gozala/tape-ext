@@ -213,14 +213,17 @@ const supervise = async (program, script, pattern = ".") => {
           if (test != null) {
             worker.send({ type: "test", path: test })
           } else {
-            tap.end()
             worker.disconnect()
+            tap.writable = false
+            tap.end()
           }
         } else if (line.startsWith(OUTPUT_PREFIX)) {
           const message = line.substr(OUTPUT_PREFIX.length + 1)
           if (message != "") {
-            tap.write(`${message}\n`)
             process.stdout.write(`${message}\n`)
+            if (tap.writable) {
+              tap.write(`${message}\n`)
+            }
           }
         } else {
           process.stdout.write(`${line}\n`)
