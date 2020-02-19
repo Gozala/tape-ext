@@ -103,6 +103,7 @@ const work = async () => {
   const capabilities = new Capabilities().set("marionette", true)
   const options = new firefox.Options()
     .setPreference("log", "{level: info}")
+    .setPreference("extensions.experiments.enabled", true)
     .setBinary(binary)
     .setLoggingPrefs(log)
 
